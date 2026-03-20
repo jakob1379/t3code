@@ -31,7 +31,6 @@ import { GitManagerLive } from "./git/Layers/GitManager";
 import { GitCoreLive } from "./git/Layers/GitCore";
 import { GitHubCliLive } from "./git/Layers/GitHubCli";
 import { CodexTextGenerationLive } from "./git/Layers/CodexTextGeneration";
-import { GitServiceLive } from "./git/Layers/GitService";
 import { BunPtyAdapterLive } from "./terminal/Layers/BunPTY";
 import { NodePtyAdapterLive } from "./terminal/Layers/NodePTY";
 import { AnalyticsService } from "./telemetry/Services/AnalyticsService";
@@ -70,8 +69,9 @@ export function makeServerProviderLayer(): Layer.Layer<
 }
 
 export function makeServerRuntimeServicesLayer() {
-  const gitCoreLayer = GitCoreLive.pipe(Layer.provideMerge(GitServiceLive));
+  const gitCoreLayer = GitCoreLive;
   const textGenerationLayer = CodexTextGenerationLive;
+  const checkpointStoreLayer = CheckpointStoreLive.pipe(Layer.provide(gitCoreLayer));
 
   const orchestrationLayer = OrchestrationEngineLive.pipe(
     Layer.provide(OrchestrationProjectionPipelineLive),
@@ -81,13 +81,13 @@ export function makeServerRuntimeServicesLayer() {
 
   const checkpointDiffQueryLayer = CheckpointDiffQueryLive.pipe(
     Layer.provideMerge(OrchestrationProjectionSnapshotQueryLive),
-    Layer.provideMerge(CheckpointStoreLive),
+    Layer.provideMerge(checkpointStoreLayer),
   );
 
   const runtimeServicesLayer = Layer.mergeAll(
     orchestrationLayer,
     OrchestrationProjectionSnapshotQueryLive,
-    CheckpointStoreLive,
+    checkpointStoreLayer,
     checkpointDiffQueryLayer,
     RuntimeReceiptBusLive,
   );
